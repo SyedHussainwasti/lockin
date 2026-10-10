@@ -16,3 +16,9 @@ The ring drains as time passes; two beeps mark each work↔break switch.
 - Progress ring is an SVG circle whose `stroke-dashoffset` tracks completion.
 - The beep is synthesized with the WebAudio API (two sine tones) — no audio
   files, no network.
+
+## Files
+
+- `index.html` — the page layout (the words and boxes you see)
+- `styles.css` — all the colors and styling, with plain-words notes
+- `app.js` — the timer logic, with plain-words notes on every step

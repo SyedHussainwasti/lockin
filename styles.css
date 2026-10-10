@@ -1,0 +1,98 @@
+/* the color names used all over the page (dark theme) */
+:root{
+  --bg:#0d1117; --card:#161b22; --border:#30363d;
+  --text:#e6edf3; --muted:#8b949e;
+  --work:#3fb950; --break:#58a6ff; --idle:#8b949e;
+}
+
+/* removes the browser's default spacing on everything, so we start clean */
+*{box-sizing:border-box; margin:0; padding:0;}
+
+/* the whole page: dark background, everything centered */
+body{
+  background:var(--bg); color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  min-height:100vh; display:flex; align-items:center; justify-content:center;
+  padding:24px 16px;
+}
+
+/* the timer card in the middle of the page */
+.card{
+  background:var(--card); border:1px solid var(--border); border-radius:16px;
+  padding:32px 28px; width:100%; max-width:380px; text-align:center;
+}
+
+/* the "Pomodoro" title */
+h1{font-size:1.3rem; font-weight:600; margin-bottom:4px;}
+
+/* the little dot in the title, green */
+h1 span{color:var(--work);}
+
+/* the small phase label under the title ("Ready", "Focus", "Break"...) */
+#phase{color:var(--muted); font-size:.85rem; text-transform:uppercase; letter-spacing:1.5px; margin-bottom:18px; min-height:1.2em;}
+
+/* the circle that holds the progress ring and the time */
+.ring{position:relative; width:230px; height:230px; margin:0 auto 20px;}
+
+/* the ring drawing itself, turned so the progress starts at the top */
+.ring svg{transform:rotate(-90deg); width:100%; height:100%;}
+
+/* the faint full circle behind the progress */
+.ring .bg{stroke:var(--border); fill:none; stroke-width:12;}
+
+/* the colored progress arc that drains as time passes */
+.ring .fg{fill:none; stroke-width:12; stroke-linecap:round; transition:stroke-dashoffset .25s linear, stroke .3s;}
+
+/* the big time text sitting in the middle of the ring */
+#time{
+  position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+  font-size:2.6rem; font-weight:600; font-variant-numeric:tabular-nums; letter-spacing:1px;
+}
+
+/* the row with the Start and Reset buttons */
+.controls{display:flex; gap:10px; justify-content:center; margin-bottom:20px;}
+
+/* the Start and Reset buttons */
+.controls button{
+  border:1px solid var(--border); background:var(--bg); color:var(--text);
+  border-radius:10px; padding:11px 22px; font-size:.95rem; font-weight:600; cursor:pointer;
+  min-width:96px;
+}
+
+/* buttons get a green edge when you hover over them */
+.controls button:hover{border-color:var(--work);}
+
+/* the Start button, green */
+#startBtn{background:var(--work); border-color:var(--work); color:#06230c;}
+
+/* the Start button turns into a blue Pause button while paused mid-session */
+#startBtn.paused{background:var(--break); border-color:var(--break); color:#06182e;}
+
+/* the two settings boxes (work minutes / break minutes) side by side */
+.settings{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px;}
+
+/* the small labels above the settings boxes */
+.settings label{font-size:.75rem; color:var(--muted); display:block; text-align:left;}
+
+/* the number boxes where you type work/break minutes */
+.settings input{
+  width:100%; margin-top:4px; background:var(--bg); border:1px solid var(--border);
+  border-radius:8px; color:var(--text); padding:9px 10px; font-size:.95rem;
+}
+
+/* the number box edge turns blue when you're typing in it */
+.settings input:focus{outline:none; border-color:var(--accent,#58a6ff);}
+
+/* the "Completed work sessions" line at the bottom */
+#cycles{color:var(--muted); font-size:.88rem;}
+
+/* the session count number, green and a bit bigger */
+#cycles b{color:var(--work); font-size:1.05rem;}
+
+/* on small phone screens: smaller card, smaller ring, buttons share the row */
+@media (max-width:390px){
+  .card{padding:24px 18px;}
+  .ring{width:200px; height:200px;}
+  #time{font-size:2.2rem;}
+  .controls button{min-width:0; flex:1;}
+}
