@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pomodoro — focus timer</title>
+<style>
+  :root{
+    --bg:#0d1117; --card:#161b22; --border:#30363d;
+    --text:#e6edf3; --muted:#8b949e;
+    --work:#3fb950; --break:#58a6ff; --idle:#8b949e;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    background:var(--bg); color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+    min-height:100vh; display:flex; align-items:center; justify-content:center;
+    padding:24px 16px;
+  }
+  .card{
+    background:var(--card); border:1px solid var(--border); border-radius:16px;
+    padding:32px 28px; width:100%; max-width:380px; text-align:center;
+  }
+  h1{font-size:1.3rem; font-weight:600; margin-bottom:4px;}
+  h1 span{color:var(--work);}
+  #phase{color:var(--muted); font-size:.85rem; text-transform:uppercase; letter-spacing:1.5px; margin-bottom:18px; min-height:1.2em;}
+  .ring{position:relative; width:230px; height:230px; margin:0 auto 20px;}
+  .ring svg{transform:rotate(-90deg); width:100%; height:100%;}
+  .ring .bg{stroke:var(--border); fill:none; stroke-width:12;}
+  .ring .fg{fill:none; stroke-width:12; stroke-linecap:round; transition:stroke-dashoffset .25s linear, stroke .3s;}
+  #time{
+    position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    font-size:2.6rem; font-weight:600; font-variant-numeric:tabular-nums; letter-spacing:1px;
+  }
+  .controls{display:flex; gap:10px; justify-content:center; margin-bottom:20px;}
+  .controls button{
+    border:1px solid var(--border); background:var(--bg); color:var(--text);
+    border-radius:10px; padding:11px 22px; font-size:.95rem; font-weight:600; cursor:pointer;
+    min-width:96px;
+  }
+  .controls button:hover{border-color:var(--work);}
+  #startBtn{background:var(--work); border-color:var(--work); color:#06230c;}
+  #startBtn.paused{background:var(--break); border-color:var(--break); color:#06182e;}
+  .settings{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px;}
+  .settings label{font-size:.75rem; color:var(--muted); display:block; text-align:left;}
+  .settings input{
+    width:100%; margin-top:4px; background:var(--bg); border:1px solid var(--border);
+    border-radius:8px; color:var(--text); padding:9px 10px; font-size:.95rem;
+  }
+  .settings input:focus{outline:none; border-color:var(--accent,#58a6ff);}
+  #cycles{color:var(--muted); font-size:.88rem;}
+  #cycles b{color:var(--work); font-size:1.05rem;}
+  @media (max-width:390px){
+    .card{padding:24px 18px;}
+    .ring{width:200px; height:200px;}
+    #time{font-size:2.2rem;}
+    .controls button{min-width:0; flex:1;}
+  }
+</style>
+</head>
+<body>
+<div class="card">
+  <h1><span>◉</span> Pomodoro</h1>
+  <div id="phase">Ready</div>
+  <div class="ring">
+    <svg viewBox="0 0 230 230">
+      <circle class="bg" cx="115" cy="115" r="100"></circle>
+      <circle class="fg" id="ringFg" cx="115" cy="115" r="100"></circle>
+    </svg>
+    <div id="time">25:00</div>
+  </div>
+  <div class="controls">
+    <button id="startBtn" type="button">Start</button>
+    <button id="resetBtn" type="button">Reset</button>
+  </div>
+  <div class="settings">
+    <label>Work (min)<input id="workLen" type="number" min="1" max="180" value="25"></label>
+    <label>Break (min)<input id="breakLen" type="number" min="1" max="60" value="5"></label>
+  </div>
+  <div id="cycles">Completed work sessions: <b id="cycleCount">0</b></div>
+</div>
+<script>
+// ==APP-LOGIC-START==
+function Pomodoro(workMin, breakMin){
+  this.workMs = workMin*60000;
+  this.breakMs = breakMin*60000;
+  this.reset();
+}
+Pomodoro.prototype.reset = function(){
+  this.phase='idle'; this.remaining=this.workMs;
+  this.cycles=0; this.running=false; this.endAt=0;
+};
+Pomodoro.prototype.setLengths = function(wMin,bMin){
+  this.workMs=Math.max(1,wMin)*60000;
+  this.breakMs=Math.max(1,bMin)*60000;
+  if(this.phase==='idle'){this.remaining=this.workMs;}
+  else if(this.phase==='work'&&!this.running){this.remaining=this.workMs;}
+  else if(this.phase==='break'&&!this.running){this.remaining=this.breakMs;}
+};
+Pomodoro.prototype.start = function(now){
+  if(this.running) return;
+  this.running=true;
+  if(this.phase==='idle') this.phase='work';
+  this.endAt=now+this.remaining;
+};
+Pomodoro.prototype.pause = function(now){
+  if(!this.running) return;
+  this.remaining=Math.max(0,this.endAt-now);
+  this.running=false;
+};
+Pomodoro.prototype.tick = function(now){
+  if(!this.running) return null;
+  this.remaining=this.endAt-now;
+  if(this.remaining<=0){
+    if(this.phase==='work'){this.phase='break';this.cycles++;this.remaining=this.breakMs;}
+    else{this.phase='work';this.remaining=this.workMs;}
+    this.endAt=now+this.remaining;
+    return 'phaseChange';
+  }
+  return null;
+};
+Pomodoro.prototype.progress = function(){
+  var total=this.phase==='work'?this.workMs:(this.phase==='break'?this.breakMs:1);
+  if(!total) return 0;
+  return Math.min(1,Math.max(0,1-this.remaining/total));
+};
+function fmtClock(ms){
+  ms=Math.max(0,ms);
+  var totalSec=Math.ceil(ms/1000);
+  var m=Math.floor(totalSec/60), s=totalSec%60;
+  return (m<10?'0':'')+m+':'+(s<10?'0':'')+s;
+}
+// ==APP-LOGIC-END==
+if(typeof document!=='undefined'){
+  var R=100, CIRC=2*Math.PI*R;
+  var ring=document.getElementById('ringFg');
+  var timeEl=document.getElementById('time');
+  var phaseEl=document.getElementById('phase');
+  var startBtn=document.getElementById('startBtn');
+  var cycleEl=document.getElementById('cycleCount');
+  var workLen=document.getElementById('workLen');
+  var breakLen=document.getElementById('breakLen');
+  ring.style.strokeDasharray=String(CIRC);
+  ring.style.strokeDashoffset=String(CIRC);
+  var pomo=new Pomodoro(25,5);
+  var audioCtx=null;
+  function beep(){
+    try{
+      if(!audioCtx) audioCtx=new (window.AudioContext||window.webkitAudioContext)();
+      if(audioCtx.state==='suspended') audioCtx.resume();
+      [0,0.35].forEach(function(delay,i){
+        var o=audioCtx.createOscillator(), g=audioCtx.createGain();
+        o.connect(g); g.connect(audioCtx.destination);
+        o.type='sine'; o.frequency.value=i===0?880:660;
+        var t=audioCtx.currentTime+delay;
+        g.gain.setValueAtTime(0.001,t);
+        g.gain.exponentialRampToValueAtTime(0.4,t+0.03);
+        g.gain.exponentialRampToValueAtTime(0.001,t+0.3);
+        o.start(t); o.stop(t+0.32);
+      });
+    }catch(e){}
+  }
+  function phaseColor(){
+    return pomo.phase==='work'?'var(--work)':(pomo.phase==='break'?'var(--break)':'var(--idle)');
+  }
+  function draw(){
+    timeEl.textContent=fmtClock(pomo.remaining);
+    ring.style.strokeDashoffset=String(CIRC*(1-pomo.progress()));
+    ring.style.stroke=phaseColor();
+    phaseEl.textContent=pomo.phase==='idle'?'Ready':(pomo.phase==='work'?(pomo.running?'Focus':'Paused — work'):(pomo.running?'Break':'Paused — break'));
+    cycleEl.textContent=String(pomo.cycles);
+    startBtn.textContent=pomo.running?'Pause':'Start';
+    startBtn.classList.toggle('paused',!pomo.running&&pomo.phase!=='idle');
+  }
+  setInterval(function(){
+    if(pomo.tick(Date.now())==='phaseChange'){beep();}
+    draw();
+  },200);
+  startBtn.addEventListener('click',function(){
+    if(pomo.running){pomo.pause(Date.now());}
+    else{
+      pomo.setLengths(parseInt(workLen.value,10)||25, parseInt(breakLen.value,10)||5);
+      pomo.start(Date.now());
+    }
+    draw();
+  });
+  document.getElementById('resetBtn').addEventListener('click',function(){
+    pomo.setLengths(parseInt(workLen.value,10)||25, parseInt(breakLen.value,10)||5);
+    pomo.reset();
+    draw();
+  });
+  function applyLengths(){
+    pomo.setLengths(parseInt(workLen.value,10)||25, parseInt(breakLen.value,10)||5);
+    draw();
+  }
+  workLen.addEventListener('change',applyLengths);
+  breakLen.addEventListener('change',applyLengths);
+  draw();
+}
+</script>
+</body>
+</html>
